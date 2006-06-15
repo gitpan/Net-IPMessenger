@@ -1,0 +1,143 @@
+package Net::IPMessenger::RecvEventHandler;
+
+use warnings;
+use strict;
+use IO::Socket;
+use base qw /Net::IPMessenger::EventHandler/;
+
+our $VERSION = '0.01';
+
+sub BR_ENTRY {
+    my $self = shift;
+    my $them = shift;
+    my $user = shift;
+
+    $them->send( $them->messagecommand('ANSENTRY'), $them->my_info );
+}
+
+sub BR_EXIT {
+    my $self = shift;
+    my $them = shift;
+    my $key  = shift->key;
+
+    delete $them->user->{$key};
+}
+
+sub ANSLIST {
+    my $self     = shift;
+    my $them     = shift;
+    my $user     = shift;
+    my $key      = $user->key;
+    my $peeraddr = inet_ntoa( $them->socket->peeraddr );
+
+    $them->parse_anslist( $user, $peeraddr );
+    delete $them->user->{$key};
+}
+
+sub SENDMSG {
+    my $self = shift;
+    my $them = shift;
+    my $user = shift;
+
+    my $command = $them->messagecommand( $user->cmd );
+    if ( $command->get_sendcheck ) {
+        $them->send( $them->messagecommand('RECVMSG'), $user->packet_num );
+    }
+    push @{ $them->message }, $user;
+}
+
+1;
+__END__
+
+=head1 NAME
+
+Net::IPMessenger::RecvEventHandler - default event handler
+
+
+=head1 VERSION
+
+This document describes Net::IPMessenger::RecvEventHandler version 0.0.1
+
+
+=head1 SYNOPSIS
+
+    use Net::IPMessenger::RecvEventHandler;
+
+    ...
+
+    $self->add_event_handler( new Net::IPMessenger::RecvEventHandler );
+
+    use Net::IPMessenger::RecvEventHandler;
+
+
+=head1 DESCRIPTION
+
+IP Messenger receive event handler.
+This is added default by Net::IPMessenger.
+
+=head1 METHODS
+
+=head2 BR_ENTRY
+
+Replies ANSENTRY packet.
+
+=head2 BR_EXIT
+
+Deletes user from the user HASH.
+
+=head2 ANSLIST
+
+Parses message and deletes user from the user HASH
+(because user is an exchange server).
+
+=head2 SENDMSG
+
+Replies RECVMSG packet and adds message to the message ARRAY.
+
+=head1 SEE ALSO
+
+L<Net::IPMessenger::EventHandler>
+
+
+=head1 BUGS AND LIMITATIONS
+
+Please report any bugs or feature requests to
+C<bug-net-ipmessenger-recveventhandler@rt.cpan.org>, or through the web interface at
+L<http://rt.cpan.org>.
+
+
+=head1 AUTHOR
+
+Masanori Hara  C<< <massa.hara@gmail.com> >>
+
+
+=head1 LICENCE AND COPYRIGHT
+
+Copyright (c) 2006, Masanori Hara C<< <massa.hara@gmail.com> >>. All rights reserved.
+
+This module is free software; you can redistribute it and/or
+modify it under the same terms as Perl itself. See L<perlartistic>.
+
+
+=head1 DISCLAIMER OF WARRANTY
+
+BECAUSE THIS SOFTWARE IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY
+FOR THE SOFTWARE, TO THE EXTENT PERMITTED BY APPLICABLE LAW. EXCEPT WHEN
+OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES
+PROVIDE THE SOFTWARE "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER
+EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE. THE
+ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE SOFTWARE IS WITH
+YOU. SHOULD THE SOFTWARE PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL
+NECESSARY SERVICING, REPAIR, OR CORRECTION.
+
+IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING
+WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY AND/OR
+REDISTRIBUTE THE SOFTWARE AS PERMITTED BY THE ABOVE LICENCE, BE
+LIABLE TO YOU FOR DAMAGES, INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL,
+OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OR INABILITY TO USE
+THE SOFTWARE (INCLUDING BUT NOT LIMITED TO LOSS OF DATA OR DATA BEING
+RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD PARTIES OR A
+FAILURE OF THE SOFTWARE TO OPERATE WITH ANY OTHER SOFTWARE), EVEN IF
+SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGES.

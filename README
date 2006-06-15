@@ -1,0 +1,45 @@
+Net-IPMessenger version 0.0.1
+
+ABOUT
+
+This module allows you to connect, get and send IP Messenger messages.
+What is IP Messenger ? See L<http://www.ipmsg.org/> for details.
+
+DEPENDENCIES
+
+The following perl modules are required:
+
+Class::Accessor::Fast
+
+No other external programs are needed.
+
+INSTALLATION
+
+To install this module, run the following commands:
+
+    perl Makefile.PL
+    make
+    make test
+    make install
+
+
+Alternatively, to install with Module::Build, you can use the following commands:
+
+    perl Build.PL
+    ./Build
+    ./Build test
+    ./Build install
+
+
+
+DEPENDENCIES
+
+None.
+
+
+COPYRIGHT AND LICENCE
+
+Copyright (C) 2006, Masanori Hara
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
