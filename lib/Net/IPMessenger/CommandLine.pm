@@ -12,13 +12,13 @@ __PACKAGE__->mk_accessors(
         /
 );
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 our $AUTOLOAD;
 
 # sort by IP address
 sub by_addr {
-    my( $ipa1, $ipa2, $ipa3, $ipa4 ) = split( /\./, $_[0]->peeraddr, 4 );
-    my( $ipb1, $ipb2, $ipb3, $ipb4 ) = split( /\./, $_[1]->peeraddr, 4 );
+    my( $ipa1, $ipa2, $ipa3, $ipa4 ) = split( /\./, $a->peeraddr, 4 );
+    my( $ipb1, $ipb2, $ipb3, $ipb4 ) = split( /\./, $b->peeraddr, 4 );
 
            $ipa1 <=> $ipb1
         || $ipa2 <=> $ipb2

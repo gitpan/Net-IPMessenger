@@ -3,3 +3,6 @@ Revision history for Net-IPMessenger
 0.0.1  Thu Jun 15 17:38:23 2006
        Initial release.
 
+0.0.2  Fri Jun 16 11:11:38 2006
+       Changed recv buffer size on Net::IPMessenger::recv().
+       Fixed bug on Net::IPMessenger::CommandLine::by_addr().

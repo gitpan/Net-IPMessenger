@@ -18,11 +18,11 @@ __PACKAGE__->mk_accessors(
         /
 );
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
-our $PROTO      = 'udp';
-our $PORT       = 2425;
-our $MSG_LENGTH = 5000;
+our $PROTO       = 'udp';
+our $PORT        = 2425;
+our $MAX_SOCKBUF = 65536;
 
 sub new {
     my $class = shift;
@@ -70,7 +70,7 @@ sub recv {
     my $sock = $self->socket;
 
     my $msg;
-    $sock->recv( $msg, $MSG_LENGTH ) or croak "recv: $!\n";
+    $sock->recv( $msg, $MAX_SOCKBUF ) or croak "recv: $!\n";
     my $peeraddr = inet_ntoa( $sock->peeraddr );
     my $peerport = $sock->peerport;
     # ignore yourself
@@ -232,7 +232,7 @@ Net::IPMessenger - Interface to the IP Messenger Protocol
 
 =head1 VERSION
 
-This document describes Net::IPMessenger version 0.0.1
+This document describes Net::IPMessenger version 0.0.2
 
 
 =head1 SYNOPSIS
