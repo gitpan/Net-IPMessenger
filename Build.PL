@@ -10,6 +10,7 @@ my $builder = Module::Build->new(
     requires => {
         'Class::Accessor::Fast' => 0,
         'Test::More'            => 0,
+        'Test::Perl::Critic'    => 0,
     },
     add_to_cleanup      => [ 'Net-IPMessenger-*' ],
 );

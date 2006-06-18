@@ -18,7 +18,7 @@ __PACKAGE__->mk_accessors(
         /
 );
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 our $PROTO       = 'udp';
 our $PORT        = 2425;
