@@ -9,7 +9,7 @@ use Term::ANSIColor qw(:constants);
 $Term::ANSIColor::AUTORESET = 1;
 use base qw /Net::IPMessenger::EventHandler/;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 sub output {
     my $str = shift;
@@ -65,7 +65,7 @@ Net:IPMessenger::ToStdoutEventHandler - event handler for standard output
 
 =head1 VERSION
 
-This document describes Net::IPMessenger::ToStdoutEventHandler version 0.0.1
+This document describes Net::IPMessenger::ToStdoutEventHandler version 0.02
 
 
 =head1 SYNOPSIS
@@ -121,12 +121,13 @@ L<http://rt.cpan.org>.
 
 =head1 AUTHOR
 
-Masanori Hara  C<< <massa.hara@gmail.com> >>
+Masanori Hara  C<< <massa.hara at gmail.com> >>
 
 
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (c) 2006, Masanori Hara C<< <massa.hara@gmail.com> >>. All rights reserved.
+Copyright (c) 2006, Masanori Hara C<< <massa.hara at gmail.com> >>.
+All rights reserved.
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself. See L<perlartistic>.

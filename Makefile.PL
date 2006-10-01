@@ -4,7 +4,7 @@ use ExtUtils::MakeMaker;
 
 WriteMakefile(
     NAME                => 'Net::IPMessenger',
-    AUTHOR              => 'Masanori Hara <massa.hara@gmail.com>',
+    AUTHOR              => 'Masanori Hara <massa.hara at gmail.com>',
     VERSION_FROM        => 'lib/Net/IPMessenger.pm',
     ABSTRACT_FROM       => 'lib/Net/IPMessenger.pm',
     PL_FILES            => {},

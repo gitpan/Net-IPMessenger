@@ -12,17 +12,19 @@ use base qw /Class::Accessor::Fast/;
 
 __PACKAGE__->mk_accessors(
     qw/
-        packet_count    user        message         nickname    groupname
-        username        hostname    socket          serveraddr  broadcast
+        packet_count    sending_packet      user            message
+        nickname        groupname           username        hostname
+        socket          serveraddr          sendretry       broadcast
         event_handler   debug
         /
 );
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 our $PROTO       = 'udp';
 our $PORT        = 2425;
-our $MAX_SOCKBUF = 65536;
+our $MAX_SOCKBUF = 65535;
+our $SEND_RETRY  = 3;
 
 sub new {
     my $class = shift;
@@ -35,6 +37,7 @@ sub new {
     $self->user( {} );
     $self->message(       [] );
     $self->event_handler( [] );
+    $self->sending_packet( {} );
 
     $self->nickname( $args{NickName} )     if $args{NickName};
     $self->groupname( $args{GroupName} )   if $args{GroupName};
@@ -42,13 +45,13 @@ sub new {
     $self->hostname( $args{HostName} )     if $args{HostName};
     $self->serveraddr( $args{ServerAddr} ) if $args{ServerAddr};
     $self->debug( $args{Debug} )           if $args{Debug};
+    $self->sendretry( $args{SendRetry} || $SEND_RETRY );
     $self->broadcast( $args{BroadCast} || '255.255.255.255' );
 
     my $sock = IO::Socket::INET->new(
         Proto     => $PROTO,
         LocalPort => $args{Port} || $PORT,
-        )
-        or return;
+    ) or return;
 
     $self->socket($sock);
     $self->add_event_handler( new Net::IPMessenger::RecvEventHandler );
@@ -102,7 +105,7 @@ sub recv {
                 $handler->debug( $self, $user );
             }
 
-            my $command  = $self->messagecommand( $user->cmd );
+            my $command  = $self->messagecommand( $user->command );
             my $modename = $command->modename;
             $handler->$modename( $self, $user ) if $handler->can($modename);
         }
@@ -171,27 +174,37 @@ sub parse_anslist {
 }
 
 sub send {
-    my $self      = shift;
-    my $cmd       = shift;
-    my $option    = shift || '';
-    my $broadcast = shift;
-    my $peeraddr  = shift;
-    my $peerport  = shift;
-    my $sock      = $self->socket;
+    my $self       = shift;
+    my $args       = shift;
+    my $sock       = $self->socket;
+    my $command    = $args->{command};
+    my $option     = $args->{option} || '';
+    my $packet_num = $args->{packet_num} || $self->get_new_packet_num;
 
-    my $msg = sprintf "1:%s:%s:%s:%s:%s", $self->packet_num, $self->username,
-        $self->hostname, $cmd, $option;
+    my $msg = sprintf "1:%s:%s:%s:%s:%s", $packet_num, $self->username,
+        $self->hostname, $command, $option;
 
-    if ($broadcast) {
+    # stack sendmsg packet number
+    if (    $command->modename eq 'SENDMSG'
+        and $command->get_sendcheck
+        and not exists $self->sending_packet->{$packet_num} )
+    {
+        $args->{sendretry} = $self->sendretry;
+        $self->sending_packet->{$packet_num} = $args;
+    }
+
+    my $peeraddr = $args->{peeraddr};
+    if ( $args->{broadcast} ) {
         $peeraddr = $self->broadcast;
         $sock->sockopt( SO_BROADCAST() => 1 )
             or croak "failed sockopt : $!\n";
     }
-    elsif ( !defined $peeraddr ) {
+    elsif ( not defined $peeraddr ) {
         $peeraddr = inet_ntoa( $sock->peeraddr );
     }
 
-    if ( !defined $peerport ) {
+    my $peerport = $args->{peerport};
+    if ( not defined $peerport ) {
         $peerport = $sock->peerport || $PORT;
     }
 
@@ -199,9 +212,23 @@ sub send {
     $sock->send( $msg, 0, $dest )
         or croak "send() failed : $!\n";
 
-    if ($broadcast) {
+    if ( $args->{broadcast} ) {
         $sock->sockopt( SO_BROADCAST() => 0 )
             or croak "failed sockopt : $!\n";
+    }
+}
+
+sub flush_sendings {
+    my $self = shift;
+
+    for my $packet_num ( keys %{ $self->sending_packet } ) {
+        my $args = $self->sending_packet->{$packet_num};
+        if ( 0 > --$args->{sendretry} ) {
+            delete $self->sending_packet->{$packet_num};
+            next;
+        }
+        $args->{packet_num} = $packet_num;
+        $self->send($args);
     }
 }
 
@@ -210,7 +237,7 @@ sub messagecommand {
     return Net::IPMessenger::MessageCommand->new(shift);
 }
 
-sub packet_num {
+sub get_new_packet_num {
     my $self  = shift;
     my $count = $self->packet_count;
     $self->packet_count( ++$count );
@@ -232,7 +259,7 @@ Net::IPMessenger - Interface to the IP Messenger Protocol
 
 =head1 VERSION
 
-This document describes Net::IPMessenger version 0.0.2
+This document describes Net::IPMessenger version 0.04
 
 
 =head1 SYNOPSIS
@@ -275,6 +302,7 @@ Protocol. Sending and Receiving the IP Messenger messages.
         HostName   => $host,
         ServerAddr => $server,
         Port       => $port,
+        SendRetry  => $sendretry,
         BroadCast  => $broadcast,
     ) or die;
 
@@ -308,12 +336,46 @@ Parses an ANSLIST to the list and stores it into the user list.
 
 =head2 send
 
+    $ipmsg->send(
+        {
+            command    => $self->messagecommand('READMSG'),
+            option     => $option,
+            broadcast  => $broadcast,
+            peeraddr   => $message->peeraddr,
+            peerport   => $message->peerport
+            packet_num => $packet_num,
+        }
+    );
+
+Creates message from command, option. You can specify packet_num to send
+reply packet or packet_num just automatically generated.
+Then sends it to the peeraddr:peerport (or gets the destination from the socket).
+
+When broadcast is defined, sends broadcast packet.
+
+NOTE. Method arguments are changed from v0.04. It used to be
     $ipmsg->send( $cmd, $option, $broadcast, $peeraddr, $peerport );
 
-Creates message from $cmd, $option. Then sends it to the $peeraddr:$peerport
-(or gets the destination from the socket).
+=head2 flush_sendings
 
-When $broadcast is defined, sends broadcast packet.
+    if ( $ipmsg->sending_packet ) {
+        $ipmsg->flush_sendings;
+    }
+
+Re-sending messages in the message queue. Message will be put into the queue
+when you send SENDMSG with SENDCHECK option.
+
+It will be deleted when you receive RECVMSG which contains same packet number
+you sent in option field, or after tried to send sendretry time(s).
+You can change retry count like below.
+
+    my $ipmsg = Net::IPMessenger->new(
+        SendRetry  => 5,
+    );
+    # or
+    $ipmsg->sendretry(5);
+
+To access message queue, use sending_packet method.
 
 =head2 messagecommand
 
@@ -321,10 +383,11 @@ When $broadcast is defined, sends broadcast packet.
 
 Creates Net::IPMessenger::MessageCommand object and returns it.
 
-=head2 packet_num
+=head2 get_new_packet_num
 
-    my $msg = sprintf "1:%s:%s:%s:%s:%s", $self->packet_num, $self->username,
-        $self->hostname, $cmd, $option;
+    my $packet_num = $self->get_new_packet_num;
+    my $msg = sprintf "1:%s:%s:%s:%s:%s", $packet_num, $self->username,
+        $self->hostname, $command, $option;
 
 Increments packet count and returns it with current time.
 
@@ -358,12 +421,13 @@ L<http://rt.cpan.org>.
 
 =head1 AUTHOR
 
-Masanori Hara  C<< <massa.hara@gmail.com> >>
+Masanori Hara  C<< <massa.hara at gmail.com> >>
 
 
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (c) 2006, Masanori Hara C<< <massa.hara@gmail.com> >>. All rights reserved.
+Copyright (c) 2006, Masanori Hara C<< <massa.hara at gmail.com> >>.
+All rights reserved.
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself. See L<perlartistic>.

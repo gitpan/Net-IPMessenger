@@ -5,7 +5,7 @@ use Module::Build;
 my $builder = Module::Build->new(
     module_name         => 'Net::IPMessenger',
     license             => 'perl',
-    dist_author         => 'Masanori Hara <massa.hara@gmail.com>',
+    dist_author         => 'Masanori Hara <massa.hara at gmail.com>',
     dist_version_from   => 'lib/Net/IPMessenger.pm',
     requires => {
         'Class::Accessor::Fast' => 0,

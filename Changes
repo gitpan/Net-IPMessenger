@@ -10,3 +10,8 @@ Revision history for Net-IPMessenger
 0.0.3  Sun Jun 18 02:29:25 2006
        Added Test::Perl::Critic to PREREQ_PM of Makefile.PL.
        Added Test::Perl::Critic to requires of Build.PL.
+
+0.0.4  Mon Oct  2 01:21:06 2006
+       Added Net::IPMessenger::flush_sending() method for retrying SNDMSG.
+       Added SendRetry argument to Net::IPMessenger::new().
+       Net::IPMessenger::send() arguments style changed.

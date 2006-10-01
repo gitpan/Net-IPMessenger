@@ -8,13 +8,13 @@ use base qw /Class::Accessor::Fast/;
 
 __PACKAGE__->mk_accessors(
     qw/
-        version     packet_num      user        host        cmd
+        version     packet_num      user        host        command
         option      nick            group       peeraddr    peerport
         listaddr    time
         /
 );
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 our $NO_NAME  = '(unnamed)';
 our $NO_GROUP = '(refugee)';
@@ -30,7 +30,7 @@ sub new {
     $self->packet_num( $args{PacketNum} ) if $args{PacketNum};
     $self->user( $args{User} )            if $args{User};
     $self->host( $args{Host} )            if $args{Host};
-    $self->cmd( $args{Command} )          if $args{Command};
+    $self->command( $args{Command} )      if $args{Command};
     $self->nick( $args{Nick} )            if $args{Nick};
     $self->group( $args{Group} )          if $args{Group};
     $self->peeraddr( $args{PeerAddr} )    if $args{PeerAddr};
@@ -53,14 +53,14 @@ sub parse {
     my $self    = shift;
     my $message = shift;
 
-    my( $ver, $packet_num, $user, $host, $cmd, $option ) =
+    my( $ver, $packet_num, $user, $host, $command, $option ) =
         split /:/, $message, 6;
 
     $self->version($ver);
     $self->packet_num($packet_num);
     $self->user($user);
     $self->host($host);
-    $self->cmd($cmd);
+    $self->command($command);
     $self->option($option);
     $self->time( strftime "%Y-%m-%d %H:%M:%S", localtime(time) );
     $self->update_nickname;
@@ -69,7 +69,7 @@ sub parse {
 sub update_nickname {
     my $self = shift;
 
-    my $command  = Net::IPMessenger::MessageCommand->new( $self->cmd );
+    my $command  = Net::IPMessenger::MessageCommand->new( $self->command );
     my $modename = $command->modename;
     if ( $modename eq 'BR_ENTRY' or $modename eq 'ANSENTRY' ) {
         my( $nick, $group ) = ( $self->option =~ /(.*?)\0(.*?)\0/o );
@@ -104,7 +104,7 @@ Net::IPMessenger::ClientData - IP Messenger client(message) class
 
 =head1 VERSION
 
-This document describes Net::IPMessenger::ClientData version 0.0.1
+This document describes Net::IPMessenger::ClientData version 0.02
 
 
 =head1 SYNOPSIS
@@ -189,12 +189,13 @@ L<http://rt.cpan.org>.
 
 =head1 AUTHOR
 
-Masanori Hara  C<< <massa.hara@gmail.com> >>
+Masanori Hara  C<< <massa.hara at gmail.com> >>
 
 
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (c) 2006, Masanori Hara C<< <massa.hara@gmail.com> >>. All rights reserved.
+Copyright (c) 2006, Masanori Hara C<< <massa.hara at gmail.com> >>.
+All rights reserved.
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself. See L<perlartistic>.

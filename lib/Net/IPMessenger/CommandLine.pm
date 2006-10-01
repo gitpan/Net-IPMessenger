@@ -12,7 +12,7 @@ __PACKAGE__->mk_accessors(
         /
 );
 
-our $VERSION = '0.02';
+our $VERSION = '0.04';
 our $AUTOLOAD;
 
 # sort by IP address
@@ -74,7 +74,13 @@ sub join {
     $self->user( {} );
 
     my $command = $self->messagecommand('BR_ENTRY')->set_broadcast;
-    $self->send( $command, $self->my_info, 1 );
+    $self->send(
+        {
+            command   => $command,
+            option    => $self->my_info,
+            broadcast => 1,
+        }
+    );
     return;
 }
 
@@ -82,7 +88,12 @@ sub exit {
     my $self = shift;
 
     my $command = $self->messagecommand('BR_EXIT')->set_broadcast;
-    $self->send( $command, '', 1 );
+    $self->send(
+        {
+            command   => $command,
+            broadcast => 1,
+        }
+    );
     return 'exiting';
 }
 
@@ -124,18 +135,27 @@ sub read {
     my $self = shift;
     my $output;
 
-    return unless @{ $self->message };
-    my $message = shift @{ $self->message };
+    if ( $self->message and @{ $self->message } ) {
+        my $message = shift @{ $self->message };
 
-    $output = sprintf "%s: %s\n%s\n", $message->time, $message->nickname,
-        $message->get_message;
+        $output = sprintf "%s: %s\n%s\n", $message->time, $message->nickname,
+            $message->get_message;
 
-    my $command = $self->messagecommand( $message->cmd );
-    if ( $command->get_secret ) {
-        $self->send( $self->messagecommand('READMSG'),
-            '', '', $message->peeraddr, $message->peerport );
+        my $command = $self->messagecommand( $message->command );
+        if ( $command->get_secret ) {
+            $self->send(
+                {
+                    command    => $self->messagecommand('READMSG'),
+                    option     => $message->packet_num,
+                    peeraddr   => $message->peeraddr,
+                    peerport   => $message->peerport
+                }
+            );
+        }
     }
-
+    else {
+        $output = "no message arrived";
+    }
     return $output;
 }
 
@@ -177,11 +197,18 @@ sub writing {
         my $peerport = $self->{_target}->peerport;
         if ( $peeraddr and $peerport ) {
             my $command = $self->messagecommand('SENDMSG');
+            $command->set_sendcheck;
             if ( $self->always_secret ) {
                 $command->set_secret;
             }
-            $self->send( $command, $self->{_write_buffer},
-                '', $peeraddr, $peerport );
+            $self->send(
+                {
+                    command  => $command,
+                    option   => $self->{_write_buffer},
+                    peeraddr => $peeraddr,
+                    peerport => $peerport
+                }
+            );
         }
 
         delete $self->{_write_buffer};
@@ -255,7 +282,7 @@ Net::IPMessenger::CommandLine - Console Interface Command for IP Messenger
 
 =head1 VERSION
 
-This document describes Net::IPMessenger::CommandLine version 0.0.1
+This document describes Net::IPMessenger::CommandLine version 0.04
 
 
 =head1 SYNOPSIS
@@ -383,12 +410,13 @@ L<http://rt.cpan.org>.
 
 =head1 AUTHOR
 
-Masanori Hara  C<< <massa.hara@gmail.com> >>
+Masanori Hara  C<< <massa.hara at gmail.com> >>
 
 
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (c) 2006, Masanori Hara C<< <massa.hara@gmail.com> >>. All rights reserved.
+Copyright (c) 2006, Masanori Hara C<< <massa.hara at gmail.com> >>.
+All rights reserved.
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself. See L<perlartistic>.

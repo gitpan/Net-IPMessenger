@@ -5,14 +5,19 @@ use strict;
 use IO::Socket;
 use base qw /Net::IPMessenger::EventHandler/;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 sub BR_ENTRY {
     my $self = shift;
     my $them = shift;
     my $user = shift;
 
-    $them->send( $them->messagecommand('ANSENTRY'), $them->my_info );
+    $them->send(
+        {
+            command => $them->messagecommand('ANSENTRY'),
+            option  => $them->my_info,
+        }
+    );
 }
 
 sub BR_EXIT {
@@ -39,11 +44,29 @@ sub SENDMSG {
     my $them = shift;
     my $user = shift;
 
-    my $command = $them->messagecommand( $user->cmd );
+    my $command = $them->messagecommand( $user->command );
     if ( $command->get_sendcheck ) {
-        $them->send( $them->messagecommand('RECVMSG'), $user->packet_num );
+        $them->send(
+            {
+                command => $them->messagecommand('RECVMSG'),
+                option  => $user->packet_num,
+            }
+        );
     }
     push @{ $them->message }, $user;
+}
+
+sub RECVMSG {
+    my $self = shift;
+    my $them = shift;
+    my $user = shift;
+
+    my $command = $them->messagecommand( $user->command );
+    my $option = $user->option;
+    $option =~ s/\0//g;
+    if ( exists $them->sending_packet->{$option} ) {
+         delete $them->sending_packet->{$option};
+     }
 }
 
 1;
@@ -56,7 +79,7 @@ Net::IPMessenger::RecvEventHandler - default event handler
 
 =head1 VERSION
 
-This document describes Net::IPMessenger::RecvEventHandler version 0.0.1
+This document describes Net::IPMessenger::RecvEventHandler version 0.02
 
 
 =head1 SYNOPSIS
@@ -94,6 +117,11 @@ Parses message and deletes user from the user HASH
 
 Replies RECVMSG packet and adds message to the message ARRAY.
 
+=head2 RECVMSG
+
+Compare received message option field with messages in the queue.
+If matchs found, delete the message in the queue.
+
 =head1 SEE ALSO
 
 L<Net::IPMessenger::EventHandler>
@@ -108,12 +136,13 @@ L<http://rt.cpan.org>.
 
 =head1 AUTHOR
 
-Masanori Hara  C<< <massa.hara@gmail.com> >>
+Masanori Hara  C<< <massa.hara at gmail.com> >>
 
 
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (c) 2006, Masanori Hara C<< <massa.hara@gmail.com> >>. All rights reserved.
+Copyright (c) 2006, Masanori Hara C<< <massa.hara at gmail.com> >>.
+All rights reserved.
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself. See L<perlartistic>.

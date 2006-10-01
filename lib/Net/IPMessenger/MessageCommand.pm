@@ -5,7 +5,7 @@ use strict;
 use overload '""' => \&get_command, fallback => 1;
 use Scalar::Util qw /looks_like_number/;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 our %COMMAND = (
     NOOPERATION     => 0x00000000,
@@ -147,7 +147,7 @@ Net::IPMessenger::MessageCommand - message command definition and accessor class
 
 =head1 VERSION
 
-This document describes Net::IPMessenger::MessageCommand version 0.0.1
+This document describes Net::IPMessenger::MessageCommand version 0.02
 
 
 =head1 SYNOPSIS
@@ -203,12 +203,13 @@ L<http://rt.cpan.org>.
 
 =head1 AUTHOR
 
-Masanori Hara  C<< <massa.hara@gmail.com> >>
+Masanori Hara  C<< <massa.hara at gmail.com> >>
 
 
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (c) 2006, Masanori Hara C<< <massa.hara@gmail.com> >>. All rights reserved.
+Copyright (c) 2006, Masanori Hara C<< <massa.hara at gmail.com> >>.
+All rights reserved.
 
 This module is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself. See L<perlartistic>.

@@ -18,8 +18,10 @@ use constant {
     HOSTNAME  => 'ipmsg',
 };
 
+$SIG{INT} = 'ignore';
 STDOUT->autoflush(1);
 
+my $version = "0.04";
 my $ipmsg = Net::IPMessenger::CommandLine->new(
     NickName     => to_sjis(NICKNAME),
     GroupName    => to_sjis(GROUPNAME),
@@ -42,18 +44,16 @@ my $select = IO::Select->new( $socket, \*STDIN );
 
 prompt();
 
-LOOP:
 while (1) {
     my @ready = $select->can_read(TIMEOUT);
 
     for my $handle (@ready) {
         # stdin
         if ( $handle eq \*STDIN ) {
-            my $msg = $handle->getline or last LOOP;
+            my $msg = $handle->getline or next;
             chomp $msg;
             unless ( length $msg > 0 ) {
-                prompt();
-                next;
+                $msg = 'read';
             }
 
             my( $cmd, @options ) = split /\s+/, to_sjis($msg);
@@ -61,7 +61,17 @@ while (1) {
                 $ipmsg->writing($cmd);
                 next;
             }
-            $msg = $ipmsg->$cmd(@options);
+            if ( $ipmsg->can($cmd) ) {
+                if ( $cmd eq 'can' or $cmd eq 'isa' or $cmd eq 'VERSION' ) {
+                    prompt("command not supported");
+                    next;
+                }
+                $msg = $ipmsg->$cmd(@options);
+            }
+            else {
+                prompt("command unknown");
+                next;
+            }
             from_to( $msg, 'shiftjis', 'euc-jp' );
             if ( defined $msg ) {
                 print $msg, "\n";
@@ -73,6 +83,11 @@ while (1) {
         elsif ( $handle eq $socket ) {
             $ipmsg->recv;
         }
+    }
+
+    # flush messages in queue
+    if ( $ipmsg->sending_packet ) {
+        $ipmsg->flush_sendings;
     }
 }
 
@@ -120,5 +135,7 @@ sub to_sjis {
 }
 
 sub prompt {
+    my $msg = shift;
+    printf "%s\n", $msg if $msg;
     printf "ipmsg> ";
 }
