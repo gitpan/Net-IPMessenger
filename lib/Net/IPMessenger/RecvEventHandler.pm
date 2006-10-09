@@ -5,7 +5,7 @@ use strict;
 use IO::Socket;
 use base qw /Net::IPMessenger::EventHandler/;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 sub BR_ENTRY {
     my $self = shift;
@@ -61,12 +61,24 @@ sub RECVMSG {
     my $them = shift;
     my $user = shift;
 
-    my $command = $them->messagecommand( $user->command );
     my $option = $user->option;
     $option =~ s/\0//g;
     if ( exists $them->sending_packet->{$option} ) {
-         delete $them->sending_packet->{$option};
-     }
+        delete $them->sending_packet->{$option};
+    }
+}
+
+sub GETINFO {
+    my $self = shift;
+    my $them = shift;
+    my $user = shift;
+
+    $them->send(
+        {
+            command => $them->messagecommand('SENDINFO'),
+            option  => sprintf( "Net::IPMessenger-%s\0", $them->VERSION ),
+        }
+    );
 }
 
 1;
@@ -79,7 +91,7 @@ Net::IPMessenger::RecvEventHandler - default event handler
 
 =head1 VERSION
 
-This document describes Net::IPMessenger::RecvEventHandler version 0.02
+This document describes Net::IPMessenger::RecvEventHandler version 0.03
 
 
 =head1 SYNOPSIS
@@ -121,6 +133,10 @@ Replies RECVMSG packet and adds message to the message ARRAY.
 
 Compare received message option field with messages in the queue.
 If matchs found, delete the message in the queue.
+
+=head2 GETINFO
+
+Replies SENDINFO packet. Version message is "Net::IPMessenger-version".
 
 =head1 SEE ALSO
 

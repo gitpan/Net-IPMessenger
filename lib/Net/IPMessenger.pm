@@ -19,10 +19,11 @@ __PACKAGE__->mk_accessors(
         /
 );
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 our $PROTO       = 'udp';
 our $PORT        = 2425;
+our $BROADCAST   = '255.255.255.255';
 our $MAX_SOCKBUF = 65535;
 our $SEND_RETRY  = 3;
 
@@ -38,15 +39,16 @@ sub new {
     $self->message(       [] );
     $self->event_handler( [] );
     $self->sending_packet( {} );
+    $self->broadcast( [] );
 
-    $self->nickname( $args{NickName} )     if $args{NickName};
-    $self->groupname( $args{GroupName} )   if $args{GroupName};
-    $self->username( $args{UserName} )     if $args{UserName};
-    $self->hostname( $args{HostName} )     if $args{HostName};
-    $self->serveraddr( $args{ServerAddr} ) if $args{ServerAddr};
-    $self->debug( $args{Debug} )           if $args{Debug};
+    $self->nickname( $args{NickName} )       if $args{NickName};
+    $self->groupname( $args{GroupName} )     if $args{GroupName};
+    $self->username( $args{UserName} )       if $args{UserName};
+    $self->hostname( $args{HostName} )       if $args{HostName};
+    $self->serveraddr( $args{ServerAddr} )   if $args{ServerAddr};
+    $self->debug( $args{Debug} )             if $args{Debug};
+    $self->add_broadcast( $args{BroadCast} ) if $args{BroadCast};
     $self->sendretry( $args{SendRetry} || $SEND_RETRY );
-    $self->broadcast( $args{BroadCast} || '255.255.255.255' );
 
     my $sock = IO::Socket::INET->new(
         Proto     => $PROTO,
@@ -66,6 +68,11 @@ sub get_connection {
 sub add_event_handler {
     my $self = shift;
     push @{ $self->event_handler }, shift;
+}
+
+sub add_broadcast {
+    my $self = shift;
+    push @{ $self->broadcast }, shift;
 }
 
 sub recv {
@@ -184,6 +191,8 @@ sub send {
     my $msg = sprintf "1:%s:%s:%s:%s:%s", $packet_num, $self->username,
         $self->hostname, $command, $option;
 
+    # TODO check max msg length check by MAX_SOCKBUF
+
     # stack sendmsg packet number
     if (    $command->modename eq 'SENDMSG'
         and $command->get_sendcheck
@@ -193,28 +202,38 @@ sub send {
         $self->sending_packet->{$packet_num} = $args;
     }
 
-    my $peeraddr = $args->{peeraddr};
-    if ( $args->{broadcast} ) {
-        $peeraddr = $self->broadcast;
-        $sock->sockopt( SO_BROADCAST() => 1 )
-            or croak "failed sockopt : $!\n";
-    }
-    elsif ( not defined $peeraddr ) {
-        $peeraddr = inet_ntoa( $sock->peeraddr );
-    }
-
     my $peerport = $args->{peerport};
     if ( not defined $peerport ) {
         $peerport = $sock->peerport || $PORT;
     }
 
-    my $dest = sockaddr_in( $peerport, inet_aton($peeraddr) );
-    $sock->send( $msg, 0, $dest )
-        or croak "send() failed : $!\n";
+    # send broadcast packet
+    if ( $command->get_broadcast ) {
+        $sock->sockopt( SO_BROADCAST() => 1 )
+            or croak "failed sockopt : $!\n";
 
-    if ( $args->{broadcast} ) {
+        unless ( @{ $self->broadcast } ) {
+            $self->add_broadcast($BROADCAST);
+        }
+        for my $broadcast_addr ( @{ $self->broadcast } ) {
+            my $dest = sockaddr_in( $peerport, inet_aton($broadcast_addr) );
+            $sock->send( $msg, 0, $dest )
+                or croak "send() failed : $!\n";
+        }
+
         $sock->sockopt( SO_BROADCAST() => 0 )
             or croak "failed sockopt : $!\n";
+    }
+    # send packet
+    else {
+        my $peeraddr = $args->{peeraddr};
+        if ( not defined $peeraddr ) {
+            $peeraddr = inet_ntoa( $sock->peeraddr );
+        }
+
+        my $dest = sockaddr_in( $peerport, inet_aton($peeraddr) );
+        $sock->send( $msg, 0, $dest )
+            or croak "send() failed : $!\n";
     }
 }
 
@@ -259,7 +278,7 @@ Net::IPMessenger - Interface to the IP Messenger Protocol
 
 =head1 VERSION
 
-This document describes Net::IPMessenger version 0.04
+This document describes Net::IPMessenger version 0.05
 
 
 =head1 SYNOPSIS
@@ -274,7 +293,7 @@ This document describes Net::IPMessenger version 0.04
     ) or die;
 
     $ipmsg->serveraddr($addr);
-    $ipmsg->broadcast($broadcast);
+    $ipmsg->add_broadcast($broadcast);
 
     $ipmsg->send(...);
 
@@ -322,6 +341,12 @@ Returns socket object.
 
 Adds event handler. Handler method will be invoked when you $ipmsg->recv().
 
+=head2 add_broadcast
+
+    $ipmsg->add_broadcast($broadcast);
+
+Adds broadcast address.
+
 =head2 recv
 
     $ipmsg->recv;
@@ -340,7 +365,6 @@ Parses an ANSLIST to the list and stores it into the user list.
         {
             command    => $self->messagecommand('READMSG'),
             option     => $option,
-            broadcast  => $broadcast,
             peeraddr   => $message->peeraddr,
             peerport   => $message->peerport
             packet_num => $packet_num,
@@ -351,7 +375,7 @@ Creates message from command, option. You can specify packet_num to send
 reply packet or packet_num just automatically generated.
 Then sends it to the peeraddr:peerport (or gets the destination from the socket).
 
-When broadcast is defined, sends broadcast packet.
+If BROADCAST flag is set, sends broadcast packet.
 
 NOTE. Method arguments are changed from v0.04. It used to be
     $ipmsg->send( $cmd, $option, $broadcast, $peeraddr, $peerport );
@@ -362,8 +386,8 @@ NOTE. Method arguments are changed from v0.04. It used to be
         $ipmsg->flush_sendings;
     }
 
-Re-sending messages in the message queue. Message will be put into the queue
-when you send SENDMSG with SENDCHECK option.
+Re-sending messages in the message queue. Message will be push into the queue
+when you send SENDMSG with SENDCHECK flag.
 
 It will be deleted when you receive RECVMSG which contains same packet number
 you sent in option field, or after tried to send sendretry time(s).

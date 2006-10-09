@@ -12,6 +12,11 @@ Revision history for Net-IPMessenger
        Added Test::Perl::Critic to requires of Build.PL.
 
 0.0.4  Mon Oct  2 01:21:06 2006
-       Added Net::IPMessenger::flush_sending() method for retrying SNDMSG.
+       Added Net::IPMessenger::flush_sending() method for retrying SENDMSG.
        Added SendRetry argument to Net::IPMessenger::new().
        Net::IPMessenger::send() arguments style changed.
+
+0.0.5  Tue Oct 10 00:32:39 2006
+       Deleted argument 'broadcast' from Net::IPMessenger::send() and
+       send() checks command's broadcast flag.
+       Added Net::IPMessenger::add_broadcast().

@@ -9,7 +9,7 @@ use Term::ANSIColor qw(:constants);
 $Term::ANSIColor::AUTORESET = 1;
 use base qw /Net::IPMessenger::EventHandler/;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 sub output {
     my $str = shift;
@@ -26,8 +26,10 @@ sub debug {
 
     my $peeraddr = inet_ntoa( $them->socket->peeraddr );
     my $peerport = $them->socket->peerport;
+    my $command  = $them->messagecommand( $user->command );
+    my $modename = $command->modename;
 
-    print CYAN "Received data from [$peeraddr:$peerport]";
+    print CYAN "Received $modename from [$peeraddr:$peerport]";
     print RESET "\n";
 }
 

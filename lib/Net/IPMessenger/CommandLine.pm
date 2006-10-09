@@ -12,7 +12,7 @@ __PACKAGE__->mk_accessors(
         /
 );
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 our $AUTOLOAD;
 
 # sort by IP address
@@ -78,7 +78,6 @@ sub join {
         {
             command   => $command,
             option    => $self->my_info,
-            broadcast => 1,
         }
     );
     return;
@@ -91,7 +90,6 @@ sub exit {
     $self->send(
         {
             command   => $command,
-            broadcast => 1,
         }
     );
     return 'exiting';
@@ -236,7 +234,7 @@ sub info {
     $output .= sprintf "username       : %s\n", $self->username;
     $output .= sprintf "hostname       : %s\n", $self->hostname;
     $output .= sprintf "server addr    : %s\n", $self->serveraddr;
-    $output .= sprintf "broadcast addr : %s\n", $self->broadcast;
+    $output .= sprintf "broadcast addr : %s\n", @{ $self->broadcast } || '';
     return $output;
 }
 
@@ -282,7 +280,7 @@ Net::IPMessenger::CommandLine - Console Interface Command for IP Messenger
 
 =head1 VERSION
 
-This document describes Net::IPMessenger::CommandLine version 0.04
+This document describes Net::IPMessenger::CommandLine version 0.05
 
 
 =head1 SYNOPSIS

@@ -21,29 +21,33 @@ use constant {
 $SIG{INT} = 'ignore';
 STDOUT->autoflush(1);
 
-my $version = "0.04";
-my $ipmsg = Net::IPMessenger::CommandLine->new(
-    NickName     => to_sjis(NICKNAME),
-    GroupName    => to_sjis(GROUPNAME),
-    UserName     => USERNAME,
-    HostName     => HOSTNAME,
-    Debug        => 1,
-    )
-    or die "cannot new Net::IPMessenger::CommandLine : $!\n";
+my $version = "0.05";
+my $ipmsg   = Net::IPMessenger::CommandLine->new(
+    NickName  => to_sjis(NICKNAME),
+    GroupName => to_sjis(GROUPNAME),
+    UserName  => USERNAME,
+    HostName  => HOSTNAME,
+    Debug     => 1,
+) or die "cannot new Net::IPMessenger::CommandLine : $!\n";
 
 my( $serveraddr, $broadcast ) = get_if($ipmsg);
 die "get serveraddr failed\n" unless $serveraddr;
 
-$ipmsg->serveraddr($serveraddr);
-$ipmsg->broadcast($broadcast);
 $ipmsg->always_secret(1);
+$ipmsg->serveraddr($serveraddr);
+$ipmsg->add_broadcast($broadcast);
 $ipmsg->add_event_handler( new Net::IPMessenger::ToStdoutEventHandler );
 
 my $socket = $ipmsg->get_connection;
 my $select = IO::Select->new( $socket, \*STDIN );
 
-prompt();
+local $SIG{ALRM} = sub {
+    $ipmsg->flush_sendings;
+    alarm( TIMEOUT + 1 );
+};
+alarm( TIMEOUT + 1 );
 
+prompt();
 while (1) {
     my @ready = $select->can_read(TIMEOUT);
 
@@ -82,16 +86,10 @@ while (1) {
         # socket
         elsif ( $handle eq $socket ) {
             $ipmsg->recv;
+            alarm( TIMEOUT + 1 );
         }
     }
-
-    # flush messages in queue
-    if ( $ipmsg->sending_packet ) {
-        $ipmsg->flush_sendings;
-    }
 }
-
-$ipmsg->close;
 
 ######################################################################
 # Sub Routine
