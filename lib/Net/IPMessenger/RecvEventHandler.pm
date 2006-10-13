@@ -5,7 +5,7 @@ use strict;
 use IO::Socket;
 use base qw /Net::IPMessenger::EventHandler/;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 sub BR_ENTRY {
     my $self = shift;
@@ -68,6 +68,22 @@ sub RECVMSG {
     }
 }
 
+sub READMSG {
+    my $self = shift;
+    my $them = shift;
+    my $user = shift;
+
+    my $command = $them->messagecommand( $user->command );
+    if ( $command->get_readcheck ) {
+        $them->send(
+            {
+                command => $them->messagecommand('ANSREADMSG'),
+                option  => $user->packet_num,
+            }
+        );
+    }
+}
+
 sub GETINFO {
     my $self = shift;
     my $them = shift;
@@ -91,7 +107,7 @@ Net::IPMessenger::RecvEventHandler - default event handler
 
 =head1 VERSION
 
-This document describes Net::IPMessenger::RecvEventHandler version 0.03
+This document describes Net::IPMessenger::RecvEventHandler version 0.04
 
 
 =head1 SYNOPSIS
@@ -127,12 +143,17 @@ Parses message and deletes user from the user HASH
 
 =head2 SENDMSG
 
-Replies RECVMSG packet and adds message to the message ARRAY.
+Replies RECVMSG packet if the message has SENDCHECK flag.
+And adds message to the message ARRAY.
 
 =head2 RECVMSG
 
 Compare received message option field with messages in the queue.
 If matchs found, delete the message in the queue.
+
+=head2 READMSG
+
+Replies ANSREADMSG packet if the message has READCHECK flag.
 
 =head2 GETINFO
 

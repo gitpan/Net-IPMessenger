@@ -20,3 +20,9 @@ Revision history for Net-IPMessenger
        Deleted argument 'broadcast' from Net::IPMessenger::send() and
        send() checks command's broadcast flag.
        Added Net::IPMessenger::add_broadcast().
+
+0.0.6  Fri Oct 13 23:31:44 2006
+       Added Net::IPMessenger::update_userlist(). And update_userlist() does not
+       add new user who sends SENDMSG with NOADDLIST opt, into user list.
+       Added Net::IPMessenger::RecvEventHandler::READMSG(). It replies ANSREADMSG
+       when READCHECK flag is on.

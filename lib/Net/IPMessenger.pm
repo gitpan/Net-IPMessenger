@@ -19,7 +19,7 @@ __PACKAGE__->mk_accessors(
         /
 );
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 our $PROTO       = 'udp';
 our $PORT        = 2425;
@@ -93,17 +93,10 @@ sub recv {
         PeerAddr => $peeraddr,
         PeerPort => $peerport,
     );
-    my $key = $user->key;
+    $self->update_userlist( $user, $msg );
 
-    # exists user
-    if ( exists $self->user->{$key} ) {
-        $self->user->{$key}->parse($msg);
-    }
-    # new user
-    else {
-        $self->user->{$key} = $user;
-    }
-
+    my $command  = $self->messagecommand( $user->command );
+    my $modename = $command->modename;
     # invoke event handler
     my $ev_handler = $self->event_handler;
     if ( ref $ev_handler and ref $ev_handler eq 'ARRAY' ) {
@@ -111,14 +104,31 @@ sub recv {
             if ( $self->debug and $handler->can('debug') ) {
                 $handler->debug( $self, $user );
             }
-
-            my $command  = $self->messagecommand( $user->command );
-            my $modename = $command->modename;
             $handler->$modename( $self, $user ) if $handler->can($modename);
         }
     }
 
     return $user;
+}
+
+sub update_userlist {
+    my $self = shift;
+    my $user = shift;
+    my $msg  = shift;
+    my $key  = $user->key;
+
+    # exists in user list
+    if ( exists $self->user->{$key} ) {
+        $self->user->{$key}->parse($msg);
+    }
+    # new user
+    else {
+        my $command  = $self->messagecommand( $user->command );
+        my $modename = $command->modename;
+        unless ( $modename eq 'SENDMSG' and $command->get_noaddlist ) {
+            $self->user->{$key} = $user;
+        }
+    }
 }
 
 sub parse_anslist {
@@ -265,7 +275,7 @@ sub get_new_packet_num {
 
 sub my_info {
     my $self = shift;
-    return sprintf "%s\0%s\0", $self->nickname, $self->groupname;
+    return sprintf "%s\0%s\0", $self->nickname || '', $self->groupname || '';
 }
 
 1;
@@ -278,7 +288,7 @@ Net::IPMessenger - Interface to the IP Messenger Protocol
 
 =head1 VERSION
 
-This document describes Net::IPMessenger version 0.05
+This document describes Net::IPMessenger version 0.06
 
 
 =head1 SYNOPSIS
@@ -352,6 +362,10 @@ Adds broadcast address.
     $ipmsg->recv;
 
 Receives a message.
+
+=head2 update_userlist
+
+Updates user HASH.
 
 =head2 parse_anslist
 

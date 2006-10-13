@@ -7,6 +7,8 @@ use Encode::Guess;
 use IO::Select;
 use IO::Handle;
 use IO::Interface qw/:flags/;
+use Sys::Hostname;
+use Term::Encoding qw(term_encoding);
 use Net::IPMessenger::CommandLine;
 use Net::IPMessenger::ToStdoutEventHandler;
 
@@ -15,14 +17,16 @@ use constant {
     NICKNAME  => 'ipmsg',
     GROUPNAME => 'ipmsg',
     USERNAME  => 'ipmsg',
-    HOSTNAME  => 'ipmsg',
+    HOSTNAME  => hostname,
 };
 
 $SIG{INT} = 'ignore';
 STDOUT->autoflush(1);
 
-my $version = "0.05";
-my $ipmsg   = Net::IPMessenger::CommandLine->new(
+my $version  = "0.06";
+my $encoding = term_encoding;
+
+my $ipmsg = Net::IPMessenger::CommandLine->new(
     NickName  => to_sjis(NICKNAME),
     GroupName => to_sjis(GROUPNAME),
     UserName  => USERNAME,
@@ -76,12 +80,12 @@ while (1) {
                 prompt("command unknown");
                 next;
             }
-            from_to( $msg, 'shiftjis', 'euc-jp' );
+            from_to( $msg, 'shiftjis', $encoding );
             if ( defined $msg ) {
                 print $msg, "\n";
                 exit if $msg eq 'exiting';
             }
-            prompt();
+            prompt( "", $ipmsg );
         }
         # socket
         elsif ( $handle eq $socket ) {
@@ -125,8 +129,7 @@ sub to_sjis {
         }
     }
     else {
-        $name = 'unknown';
-        from_to( $str, 'euc-jp', 'shiftjis' );
+        from_to( $str, $encoding, 'shiftjis' );
     }
 
     return $str;
