@@ -2,28 +2,28 @@
 
 use strict;
 use warnings;
-use Encode qw /encode decode from_to/;
+use Encode qw( encode decode from_to );
 use Encode::Guess;
 use IO::Select;
 use IO::Handle;
-use IO::Interface qw/:flags/;
+use IO::Interface::Simple;
 use Sys::Hostname;
 use Term::Encoding qw(term_encoding);
 use Net::IPMessenger::CommandLine;
 use Net::IPMessenger::ToStdoutEventHandler;
 
-use constant TIMEOUT => 3;
 use constant {
-    NICKNAME  => 'ipmsg',
     GROUPNAME => 'ipmsg',
+    NICKNAME  => 'ipmsg',
     USERNAME  => 'ipmsg',
     HOSTNAME  => hostname,
+    TIMEOUT   => 3,
 };
 
-$SIG{INT} = 'ignore';
+local $SIG{INT} = 'ignore';
 STDOUT->autoflush(1);
 
-my $version  = "0.06";
+my $version  = "0.07";
 my $encoding = term_encoding;
 
 my $ipmsg = Net::IPMessenger::CommandLine->new(
@@ -37,7 +37,7 @@ my $ipmsg = Net::IPMessenger::CommandLine->new(
 my( $serveraddr, $broadcast ) = get_if($ipmsg);
 die "get serveraddr failed\n" unless $serveraddr;
 
-$ipmsg->always_secret(1);
+$ipmsg->use_secret(1);
 $ipmsg->serveraddr($serveraddr);
 $ipmsg->add_broadcast($broadcast);
 $ipmsg->add_event_handler( new Net::IPMessenger::ToStdoutEventHandler );
@@ -60,14 +60,14 @@ while (1) {
         if ( $handle eq \*STDIN ) {
             my $msg = $handle->getline or next;
             chomp $msg;
-            unless ( length $msg > 0 ) {
-                $msg = 'read';
-            }
 
             my( $cmd, @options ) = split /\s+/, to_sjis($msg);
             if ( $ipmsg->is_writing ) {
                 $ipmsg->writing($cmd);
                 next;
+            }
+            unless ($cmd) {
+                $cmd = 'read';
             }
             if ( $ipmsg->can($cmd) ) {
                 if ( $cmd eq 'can' or $cmd eq 'isa' or $cmd eq 'VERSION' ) {
@@ -102,16 +102,10 @@ while (1) {
 sub get_if {
     my $socket = shift->socket;
 
-    for my $if ( $socket->if_list ) {
-        my $flags = $socket->if_flags($if);
-        next if $flags & IFF_LOOPBACK;
-        next unless $flags & IFF_BROADCAST;
-
-        my $serveraddr = $socket->if_addr($if);
-        my $broadcast  = $socket->if_broadcast($if);
-
-        if ( $serveraddr and $broadcast ) {
-            return ( $serveraddr, $broadcast );
+    my @interfaces = IO::Interface::Simple->interfaces;
+    for my $if (@interfaces) {
+        if ( not $if->is_loopback and $if->is_running and $if->is_broadcast ) {
+            return( $if->address, $if->broadcast );
         }
     }
     return;
@@ -119,7 +113,7 @@ sub get_if {
 
 sub to_sjis {
     my $str = shift;
-    my $enc = guess_encoding( $str, qw/euc-jp shiftjis 7bit-jis/ );
+    my $enc = guess_encoding( $str, qw( euc-jp shiftjis 7bit-jis ) );
 
     my $name;
     if ( ref($enc) ) {
@@ -136,7 +130,15 @@ sub to_sjis {
 }
 
 sub prompt {
-    my $msg = shift;
+    my $msg   = shift;
+    my $ipmsg = shift;
+
+    return if $ipmsg and $ipmsg->is_writing;
     printf "%s\n", $msg if $msg;
-    printf "ipmsg> ";
+
+    my $count = '';
+    if ( defined $ipmsg and @{ $ipmsg->message } ) {
+        $count = sprintf " (%03d)", scalar @{ $ipmsg->message };
+    }
+    printf "ipmsg%s> ", $count;
 }

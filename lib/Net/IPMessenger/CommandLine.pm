@@ -2,17 +2,12 @@ package Net::IPMessenger::CommandLine;
 
 use warnings;
 use strict;
-use Carp;
 use IO::Socket;
-use base qw /Net::IPMessenger/;
+use base qw( Net::IPMessenger );
 
-__PACKAGE__->mk_accessors(
-    qw/
-        always_secret
-        /
-);
+__PACKAGE__->mk_accessors( qw( use_secret ) );
 
-our $VERSION = '0.05';
+our $VERSION = '0.07';
 our $AUTOLOAD;
 
 # sort by IP address
@@ -74,24 +69,23 @@ sub join {
     $self->user( {} );
 
     my $command = $self->messagecommand('BR_ENTRY')->set_broadcast;
+    if ( $self->encrypt ) {
+        $command->set_encrypt;
+    }
     $self->send(
         {
-            command   => $command,
-            option    => $self->my_info,
+            command => $command,
+            option  => $self->my_info,
         }
     );
     return;
 }
 
-sub exit {
+sub quit {
     my $self = shift;
 
     my $command = $self->messagecommand('BR_EXIT')->set_broadcast;
-    $self->send(
-        {
-            command   => $command,
-        }
-    );
+    $self->send( { command => $command, } );
     return 'exiting';
 }
 
@@ -143,10 +137,10 @@ sub read {
         if ( $command->get_secret ) {
             $self->send(
                 {
-                    command    => $self->messagecommand('READMSG'),
-                    option     => $message->packet_num,
-                    peeraddr   => $message->peeraddr,
-                    peerport   => $message->peerport
+                    command  => $self->messagecommand('READMSG'),
+                    option   => $message->packet_num,
+                    peeraddr => $message->peeraddr,
+                    peerport => $message->peerport
                 }
             );
         }
@@ -168,11 +162,23 @@ sub write {
     my $target;
     for my $user ( values %{ $self->user } ) {
         if ( $user->nickname eq $sendto ) {
+            if ( $user->encrypt and $self->encrypt and not $user->pubkey ) {
+                my $option = sprintf "%x",
+                    $self->encrypt->support_encryption;
+                $self->send(
+                    {
+                        command  => $self->messagecommand('GETPUBKEY'),
+                        option   => $option,
+                        peeraddr => $user->peeraddr,
+                        peerport => $user->peerport,
+                    }
+                );
+            }
             $target = $user;
             last;
         }
     }
-    return unless defined $target;
+    return "no target found" unless defined $target;
 
     $self->{_target}       = $target;
     $self->{_write_buffer} = "";
@@ -187,18 +193,27 @@ sub writing {
     my $self = shift;
     my $data = shift;
 
-    chomp $data;
     return unless defined $data;
 
     if ( $data eq '.' ) {
-        my $peeraddr = $self->{_target}->peeraddr;
-        my $peerport = $self->{_target}->peerport;
+        my $target   = $self->{_target};
+        my $peeraddr = $target->peeraddr;
+        my $peerport = $target->peerport;
+
         if ( $peeraddr and $peerport ) {
             my $command = $self->messagecommand('SENDMSG');
             $command->set_sendcheck;
-            if ( $self->always_secret ) {
-                $command->set_secret;
+            $command->set_secret if $self->use_secret;
+            # encrypt message
+            if ( $target->encrypt and $self->encrypt ) {
+                $command->set_encrypt;
+                my $encrypted = $self->encrypt->encrypt_message(
+                    $self->{_write_buffer},
+                    $target->pubkey,
+                );
+                $self->{_write_buffer} = $encrypted;
             }
+
             $self->send(
                 {
                     command  => $command,
@@ -210,7 +225,7 @@ sub writing {
         }
 
         delete $self->{_write_buffer};
-        $self->{_target} = undef;
+        delete $self->{_target};
     }
     else {
         $self->{_write_buffer} .= $data . "\n";
@@ -253,16 +268,16 @@ Command list (shortcut) :
     message (m) : show message list
     read    (r) : read 1 oldest message and delete
     write   (w) : write message to the nickname user
-    exit    (q) : send exit packet (BR_EXIT) to the broad cast address
+    quit    (q) : send exit packet (BR_EXIT) to the broad cast address
     help    (h) : show this help
 __OUTPUT__
 
     return $output;
 }
 
-# Register some shortcuts
+# regist some shortcuts
 sub j { shift->join(@_); }
-sub q { shift->exit(@_); }
+sub q { shift->quit(@_); }
 sub l { shift->list(@_); }
 sub m { shift->messages(@_); }
 sub r { shift->read(@_); }
@@ -280,7 +295,7 @@ Net::IPMessenger::CommandLine - Console Interface Command for IP Messenger
 
 =head1 VERSION
 
-This document describes Net::IPMessenger::CommandLine version 0.05
+This document describes Net::IPMessenger::CommandLine version 0.07
 
 
 =head1 SYNOPSIS
@@ -328,7 +343,7 @@ Returns socket's peeraddr.
 
 Clears all users and send broadcast ENTRY packet.
 
-=head2 exit
+=head2 quit
 
 Sends broadcast EXIT packet.
 
@@ -372,7 +387,7 @@ Shortcut of join.
 
 =head2 q
 
-Shortcut of exit.
+Shortcut of quit.
 
 =head2 l
 
@@ -402,7 +417,7 @@ Shortcut of help.
 =head1 BUGS AND LIMITATIONS
 
 Please report any bugs or feature requests to
-C<bug-net-ipmessenger-commandline@rt.cpan.org>, or through the web interface at
+C<bug-net-ipmessenger@rt.cpan.org>, or through the web interface at
 L<http://rt.cpan.org>.
 
 
@@ -413,7 +428,7 @@ Masanori Hara  C<< <massa.hara at gmail.com> >>
 
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (c) 2006, Masanori Hara C<< <massa.hara at gmail.com> >>.
+Copyright (c) 2007, Masanori Hara C<< <massa.hara at gmail.com> >>.
 All rights reserved.
 
 This module is free software; you can redistribute it and/or

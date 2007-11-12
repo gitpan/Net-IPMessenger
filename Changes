@@ -26,3 +26,7 @@ Revision history for Net-IPMessenger
        add new user who sends SENDMSG with NOADDLIST opt, into user list.
        Added Net::IPMessenger::RecvEventHandler::READMSG(). It replies ANSREADMSG
        when READCHECK flag is on.
+
+0.0.7  Mon Nov 12 01:24:11 2007
+       Added package Net::IPMessenger::Encrypt, Net::IPMessenger::EncryptOption
+       to support RSA + Blowfish/CBC encryption.

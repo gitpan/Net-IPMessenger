@@ -2,14 +2,14 @@ package Net::IPMessenger::ToStdoutEventHandler;
 
 use warnings;
 use strict;
-use Encode qw /from_to/;
+use Encode qw( from_to );
 use IO::Socket;
 use POSIX;
 use Term::ANSIColor qw(:constants);
 $Term::ANSIColor::AUTORESET = 1;
-use base qw /Net::IPMessenger::EventHandler/;
+use base qw( Net::IPMessenger::EventHandler );
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 sub output {
     my $str = shift;
@@ -54,7 +54,7 @@ sub SENDMSG {
     my $them = shift;
     my $user = shift;
 
-    output("you've got message from " . $user->nickname . " .\a");
+    output("you got message from " . $user->nickname . " .\a");
 }
 
 1;
@@ -67,7 +67,7 @@ Net:IPMessenger::ToStdoutEventHandler - event handler for standard output
 
 =head1 VERSION
 
-This document describes Net::IPMessenger::ToStdoutEventHandler version 0.02
+This document describes Net::IPMessenger::ToStdoutEventHandler version 0.04
 
 
 =head1 SYNOPSIS
@@ -117,7 +117,7 @@ L<Net::IPMessenger::EventHandler>
 =head1 BUGS AND LIMITATIONS
 
 Please report any bugs or feature requests to
-C<bug-net-ipmessenger-tostdouteventhandler@rt.cpan.org>, or through the web interface at
+C<bug-net-ipmessenger@rt.cpan.org>, or through the web interface at
 L<http://rt.cpan.org>.
 
 
@@ -128,7 +128,7 @@ Masanori Hara  C<< <massa.hara at gmail.com> >>
 
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (c) 2006, Masanori Hara C<< <massa.hara at gmail.com> >>.
+Copyright (c) 2007, Masanori Hara C<< <massa.hara at gmail.com> >>.
 All rights reserved.
 
 This module is free software; you can redistribute it and/or

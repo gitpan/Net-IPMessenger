@@ -3,11 +3,12 @@ package Net::IPMessenger::MessageCommand;
 use warnings;
 use strict;
 use overload '""' => \&get_command, fallback => 1;
-use Scalar::Util qw /looks_like_number/;
+use Scalar::Util qw( looks_like_number );
 
-our $VERSION = '0.02';
+our $VERSION = '0.04';
+our $AUTOLOAD;
 
-our %COMMAND = (
+my %COMMAND = (
     NOOPERATION     => 0x00000000,
     BR_ENTRY        => 0x00000001,
     BR_EXIT         => 0x00000002,
@@ -31,11 +32,11 @@ our %COMMAND = (
     RELEASEFIL      => 0x00000061,
     GETDIRFILE      => 0x00000062,
     GETPUBKEY       => 0x00000072,
-    GETPUBKEY       => 0x00000073,
+    ANSPUBKEY       => 0x00000073,
 );
 
-our $MODE     = 0x000000ff;
-our %SEND_OPT = (
+my $MODE     = 0x000000ff;
+my %SEND_OPT = (
     ABSENCE    => 0x00000100,
     SERVER     => 0x00000200,
     DIALUP     => 0x00010000,
@@ -54,8 +55,6 @@ our %SEND_OPT = (
     FILEATTACH => 0x00200000,
     ENCRYPT    => 0x00400000,
 );
-
-our $AUTOLOAD;
 
 sub new {
     my $class = shift;
@@ -88,12 +87,11 @@ sub AUTOLOAD {
     if ( $name =~ /^get_(.+)/ ) {
         my $opt = uc $1;
         if ( exists $SEND_OPT{$opt} ) {
-            return ( $command & $SEND_OPT{$opt} );
+            return ( $command & $SEND_OPT{$opt} ? 1 : 0 );
         }
         else {
             return;
         }
-
     }
     elsif ( $name =~ /^set_(.+)/ ) {
         my $opt = uc $1;
@@ -147,7 +145,7 @@ Net::IPMessenger::MessageCommand - message command definition and accessor class
 
 =head1 VERSION
 
-This document describes Net::IPMessenger::MessageCommand version 0.02
+This document describes Net::IPMessenger::MessageCommand version 0.04
 
 
 =head1 SYNOPSIS
@@ -159,8 +157,8 @@ This document describes Net::IPMessenger::MessageCommand version 0.02
 
 =head1 DESCRIPTION
 
-This defines IP Messenger command and option flags. Also this gives you accessors
-of those option flags.
+This defines IP Messenger command and option flags.
+This also gives you accessors of those option flags.
 
 
 =head1 METHODS
@@ -197,7 +195,7 @@ Just returns stored command value.
 =head1 BUGS AND LIMITATIONS
 
 Please report any bugs or feature requests to
-C<bug-net-ipmessenger-messagecommand@rt.cpan.org>, or through the web interface at
+C<bug-net-ipmessenger@rt.cpan.org>, or through the web interface at
 L<http://rt.cpan.org>.
 
 
@@ -208,7 +206,7 @@ Masanori Hara  C<< <massa.hara at gmail.com> >>
 
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (c) 2006, Masanori Hara C<< <massa.hara at gmail.com> >>.
+Copyright (c) 2007, Masanori Hara C<< <massa.hara at gmail.com> >>.
 All rights reserved.
 
 This module is free software; you can redistribute it and/or

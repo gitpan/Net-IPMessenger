@@ -3,7 +3,7 @@ package Net::IPMessenger::EventHandler;
 use warnings;
 use strict;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 sub new {
     my $class = shift;
@@ -38,7 +38,7 @@ Net::IPMessenger::EventHandler - IP Messenger event handler base class.
 
 =head1 VERSION
 
-This document describes Net::IPMessenger::EventHandler version 0.0.1
+This document describes Net::IPMessenger::EventHandler version 0.02
 
 
 =head1 SYNOPSIS
@@ -104,7 +104,7 @@ L<Net::IPMessenger::RecvEventHandler>, L<Net::IPMessenger::ToStdoutEventHandler>
 =head1 BUGS AND LIMITATIONS
 
 Please report any bugs or feature requests to
-C<bug-net-ipmessenger-eventhandler@rt.cpan.org>, or through the web interface at
+C<bug-net-ipmessenger@rt.cpan.org>, or through the web interface at
 L<http://rt.cpan.org>.
 
 
@@ -115,7 +115,7 @@ Masanori Hara  C<< <massa.hara at gmail.com> >>
 
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (c) 2006, Masanori Hara C<< <massa.hara at gmail.com> >>.
+Copyright (c) 2007, Masanori Hara C<< <massa.hara at gmail.com> >>.
 All rights reserved.
 
 This module is free software; you can redistribute it and/or

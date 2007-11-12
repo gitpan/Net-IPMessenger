@@ -5,27 +5,26 @@ use strict;
 use Carp;
 use IO::Socket::INET;
 use Net::IPMessenger::ClientData;
-use Net::IPMessenger::RecvEventHandler;
+use Net::IPMessenger::Encrypt;
 use Net::IPMessenger::MessageCommand;
-
-use base qw /Class::Accessor::Fast/;
+use Net::IPMessenger::RecvEventHandler;
+use base qw( Class::Accessor::Fast );
 
 __PACKAGE__->mk_accessors(
-    qw/
+    qw(
         packet_count    sending_packet      user            message
         nickname        groupname           username        hostname
         socket          serveraddr          sendretry       broadcast
-        event_handler   debug
-        /
+        event_handler   encrypt             debug
+        )
 );
 
-our $VERSION = '0.06';
-
-our $PROTO       = 'udp';
-our $PORT        = 2425;
-our $BROADCAST   = '255.255.255.255';
-our $MAX_SOCKBUF = 65535;
-our $SEND_RETRY  = 3;
+our $VERSION    = '0.07';
+my $PROTO       = 'udp';
+my $PORT        = 2425;
+my $BROADCAST   = '255.255.255.255';
+my $MAX_SOCKBUF = 65535;
+my $SEND_RETRY  = 3;
 
 sub new {
     my $class = shift;
@@ -50,13 +49,18 @@ sub new {
     $self->add_broadcast( $args{BroadCast} ) if $args{BroadCast};
     $self->sendretry( $args{SendRetry} || $SEND_RETRY );
 
+    # encryption support
+    my $encrypt_support = 1;
+    $encrypt_support = $args{Encrypt} if exists $args{Encrypt};
+    $self->encrypt( Net::IPMessenger::Encrypt->new ) if $encrypt_support;
+
     my $sock = IO::Socket::INET->new(
         Proto     => $PROTO,
         LocalPort => $args{Port} || $PORT,
     ) or return;
 
     $self->socket($sock);
-    $self->add_event_handler( new Net::IPMessenger::RecvEventHandler );
+    $self->add_event_handler( Net::IPMessenger::RecvEventHandler->new );
 
     return $self;
 }
@@ -97,6 +101,7 @@ sub recv {
 
     my $command  = $self->messagecommand( $user->command );
     my $modename = $command->modename;
+
     # invoke event handler
     my $ev_handler = $self->event_handler;
     if ( ref $ev_handler and ref $ev_handler eq 'ARRAY' ) {
@@ -288,7 +293,7 @@ Net::IPMessenger - Interface to the IP Messenger Protocol
 
 =head1 VERSION
 
-This document describes Net::IPMessenger version 0.06
+This document describes Net::IPMessenger version 0.07
 
 
 =head1 SYNOPSIS
@@ -333,10 +338,12 @@ Protocol. Sending and Receiving the IP Messenger messages.
         Port       => $port,
         SendRetry  => $sendretry,
         BroadCast  => $broadcast,
+        Encrypt    => 1,            # true value means encrypt support enable
     ) or die;
 
-Creates object, sets initial variables and create socket. When this returns
-undef, it means you failed to create socket (i.e. port already in use).
+The new method creates object, sets initial variables and create socket.
+When this returns undef, it means you failed to create socket
+(i.e. port already in use).
 Check $! to see the error reason.
 
 =head2 get_connection
@@ -349,7 +356,7 @@ Returns socket object.
 
     $ipmsg->add_event_handler( new MyEventHandler );
 
-Adds event handler. Handler method will be invoked when you $ipmsg->recv().
+Adds event handler. Handler method will be invoked when you do $ipmsg->recv().
 
 =head2 add_broadcast
 
@@ -464,7 +471,7 @@ Masanori Hara  C<< <massa.hara at gmail.com> >>
 
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (c) 2006, Masanori Hara C<< <massa.hara at gmail.com> >>.
+Copyright (c) 2007, Masanori Hara C<< <massa.hara at gmail.com> >>.
 All rights reserved.
 
 This module is free software; you can redistribute it and/or

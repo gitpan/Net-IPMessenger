@@ -4,20 +4,20 @@ use warnings;
 use strict;
 use POSIX;
 use Net::IPMessenger::MessageCommand;
-use base qw /Class::Accessor::Fast/;
+use base qw( Class::Accessor::Fast );
 
 __PACKAGE__->mk_accessors(
-    qw/
-        version     packet_num      user        host        command
-        option      nick            group       peeraddr    peerport
-        listaddr    time
-        /
+    qw(
+        version         packet_num      user            host
+        command         option          nick            group
+        peeraddr        peerport        listaddr        time
+        pubkey          encrypt
+        )
 );
 
-our $VERSION = '0.02';
-
-our $NO_NAME  = '(unnamed)';
-our $NO_GROUP = '(refugee)';
+our $VERSION = '0.04';
+my $NO_NAME  = '(noname)';
+my $NO_GROUP = '(nogroup)';
 
 sub new {
     my $class = shift;
@@ -38,7 +38,7 @@ sub new {
     $self->listaddr( $args{ListAddr} )    if $args{ListAddr};
     $self->time( strftime "%Y-%m-%d %H:%M:%S", localtime(time) );
 
-    # some clients set "BS" in the GROUP so it would be better deleted
+    # some clients set "BS" in the GROUP so deletes it
     if ( $self->group and $self->group eq "\x08" ) {
         $self->group($NO_GROUP);
     }
@@ -76,6 +76,7 @@ sub update_nickname {
 
         $self->nick($nick)   if defined $nick;
         $self->group($group) if defined $group;
+        $self->encrypt( $command->get_encrypt );
     }
 }
 
@@ -104,7 +105,7 @@ Net::IPMessenger::ClientData - IP Messenger client(message) class
 
 =head1 VERSION
 
-This document describes Net::IPMessenger::ClientData version 0.02
+This document describes Net::IPMessenger::ClientData version 0.04
 
 
 =head1 SYNOPSIS
@@ -183,7 +184,7 @@ None reported.
 =head1 BUGS AND LIMITATIONS
 
 Please report any bugs or feature requests to
-C<bug-net-ipmessenger-clientdata@rt.cpan.org>, or through the web interface at
+C<bug-net-ipmessenger@rt.cpan.org>, or through the web interface at
 L<http://rt.cpan.org>.
 
 
@@ -194,7 +195,7 @@ Masanori Hara  C<< <massa.hara at gmail.com> >>
 
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (c) 2006, Masanori Hara C<< <massa.hara at gmail.com> >>.
+Copyright (c) 2007, Masanori Hara C<< <massa.hara at gmail.com> >>.
 All rights reserved.
 
 This module is free software; you can redistribute it and/or

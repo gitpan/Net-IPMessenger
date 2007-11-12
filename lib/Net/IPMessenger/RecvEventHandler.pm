@@ -3,81 +3,90 @@ package Net::IPMessenger::RecvEventHandler;
 use warnings;
 use strict;
 use IO::Socket;
-use base qw /Net::IPMessenger::EventHandler/;
+use base qw( Net::IPMessenger::EventHandler );
 
 our $VERSION = '0.04';
 
 sub BR_ENTRY {
-    my $self = shift;
-    my $them = shift;
-    my $user = shift;
+    my $self  = shift;
+    my $ipmsg = shift;
+    my $user  = shift;
 
-    $them->send(
+    my $command = $ipmsg->messagecommand('ANSENTRY');
+    $command->set_encrypt if $ipmsg->encrypt;
+    $ipmsg->send(
         {
-            command => $them->messagecommand('ANSENTRY'),
-            option  => $them->my_info,
+            command => $command,
+            option  => $ipmsg->my_info,
         }
     );
 }
 
 sub BR_EXIT {
-    my $self = shift;
-    my $them = shift;
-    my $key  = shift->key;
+    my $self  = shift;
+    my $ipmsg = shift;
+    my $key   = shift->key;
 
-    delete $them->user->{$key};
+    delete $ipmsg->user->{$key};
 }
 
 sub ANSLIST {
     my $self     = shift;
-    my $them     = shift;
+    my $ipmsg    = shift;
     my $user     = shift;
     my $key      = $user->key;
-    my $peeraddr = inet_ntoa( $them->socket->peeraddr );
+    my $peeraddr = inet_ntoa( $ipmsg->socket->peeraddr );
 
-    $them->parse_anslist( $user, $peeraddr );
-    delete $them->user->{$key};
+    $ipmsg->parse_anslist( $user, $peeraddr );
+    delete $ipmsg->user->{$key};
 }
 
 sub SENDMSG {
-    my $self = shift;
-    my $them = shift;
-    my $user = shift;
+    my $self  = shift;
+    my $ipmsg = shift;
+    my $user  = shift;
 
-    my $command = $them->messagecommand( $user->command );
+    my $command = $ipmsg->messagecommand( $user->command );
     if ( $command->get_sendcheck ) {
-        $them->send(
+        $ipmsg->send(
             {
-                command => $them->messagecommand('RECVMSG'),
+                command => $ipmsg->messagecommand('RECVMSG'),
                 option  => $user->packet_num,
             }
         );
     }
-    push @{ $them->message }, $user;
+
+    # decrypt message if the message is encrypted
+    # and encryption support is available
+    if ( $command->get_encrypt and $ipmsg->encrypt ) {
+        my $decrypted = $ipmsg->encrypt->decrypt_message( $user->get_message );
+        $user->option($decrypted);
+    }
+    push @{ $ipmsg->message }, $user;
 }
 
 sub RECVMSG {
-    my $self = shift;
-    my $them = shift;
-    my $user = shift;
+    my $self  = shift;
+    my $ipmsg = shift;
+    my $user  = shift;
 
     my $option = $user->option;
     $option =~ s/\0//g;
-    if ( exists $them->sending_packet->{$option} ) {
-        delete $them->sending_packet->{$option};
+    if ( exists $ipmsg->sending_packet->{$option} ) {
+        delete $ipmsg->sending_packet->{$option};
     }
 }
 
 sub READMSG {
-    my $self = shift;
-    my $them = shift;
-    my $user = shift;
+    my $self  = shift;
+    my $ipmsg = shift;
+    my $user  = shift;
 
-    my $command = $them->messagecommand( $user->command );
+    my $command = $ipmsg->messagecommand( $user->command );
     if ( $command->get_readcheck ) {
-        $them->send(
+        $ipmsg->send(
             {
-                command => $them->messagecommand('ANSREADMSG'),
+                command => $ipmsg->messagecommand('ANSREADMSG'),
                 option  => $user->packet_num,
             }
         );
@@ -85,14 +94,49 @@ sub READMSG {
 }
 
 sub GETINFO {
-    my $self = shift;
-    my $them = shift;
-    my $user = shift;
+    my $self  = shift;
+    my $ipmsg = shift;
+    my $user  = shift;
 
-    $them->send(
+    $ipmsg->send(
         {
-            command => $them->messagecommand('SENDINFO'),
-            option  => sprintf( "Net::IPMessenger-%s\0", $them->VERSION ),
+            command => $ipmsg->messagecommand('SENDINFO'),
+            option  => sprintf( "Net::IPMessenger-%s", $ipmsg->VERSION ),
+        }
+    );
+}
+
+sub GETPUBKEY {
+    my $self  = shift;
+    my $ipmsg = shift;
+    my $user  = shift;
+
+    return unless $ipmsg->encrypt;
+
+    $ipmsg->send(
+        {
+            command => $ipmsg->messagecommand('ANSPUBKEY'),
+            option  => $ipmsg->encrypt->public_key_string,
+        }
+    );
+}
+
+sub ANSPUBKEY {
+    my $self  = shift;
+    my $ipmsg = shift;
+    my $user  = shift;
+
+    return unless $ipmsg->encrypt;
+
+    my $key     = $user->key;
+    my $message = $user->get_message;
+    my( $option, $public_key ) = split /:/,  $message;
+    my( $exponent, $modulus )  = split /\-/, $public_key;
+    $ipmsg->user->{$key}->pubkey(
+        {
+            option   => $option,
+            exponent => $exponent,
+            modulus  => $modulus,
         }
     );
 }
@@ -159,6 +203,14 @@ Replies ANSREADMSG packet if the message has READCHECK flag.
 
 Replies SENDINFO packet. Version message is "Net::IPMessenger-version".
 
+=head2 GETPUBKEY
+
+Replies ANSPUBKEY packet.
+
+=head2 ANSPUBKEY
+
+Gets RSA public key and store it.
+
 =head1 SEE ALSO
 
 L<Net::IPMessenger::EventHandler>
@@ -167,7 +219,7 @@ L<Net::IPMessenger::EventHandler>
 =head1 BUGS AND LIMITATIONS
 
 Please report any bugs or feature requests to
-C<bug-net-ipmessenger-recveventhandler@rt.cpan.org>, or through the web interface at
+C<bug-net-ipmessenger@rt.cpan.org>, or through the web interface at
 L<http://rt.cpan.org>.
 
 
@@ -178,7 +230,7 @@ Masanori Hara  C<< <massa.hara at gmail.com> >>
 
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (c) 2006, Masanori Hara C<< <massa.hara at gmail.com> >>.
+Copyright (c) 2007, Masanori Hara C<< <massa.hara at gmail.com> >>.
 All rights reserved.
 
 This module is free software; you can redistribute it and/or
