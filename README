@@ -1,4 +1,4 @@
-Net-IPMessenger version 0.0.7
+Net-IPMessenger version 0.0.8
 
 ABOUT
 
@@ -47,7 +47,7 @@ Alternatively, to install with Module::Build, you can use the following commands
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2007, Masanori Hara
+Copyright (C) 2010, Masanori Hara
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

@@ -30,3 +30,7 @@ Revision history for Net-IPMessenger
 0.0.7  Mon Nov 12 01:24:11 2007
        Added package Net::IPMessenger::Encrypt, Net::IPMessenger::EncryptOption
        to support RSA + Blowfish/CBC encryption.
+
+0.0.8  Tue May 11 23:43:49 2010
+       Removed Test::Perl::Critic from Makefile.PL.
+       changed perlcritic.t, pod-coverage.t not to run tests by default.

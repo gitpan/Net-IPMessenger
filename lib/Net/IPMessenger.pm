@@ -19,7 +19,7 @@ __PACKAGE__->mk_accessors(
         )
 );
 
-our $VERSION    = '0.07';
+our $VERSION    = '0.08';
 my $PROTO       = 'udp';
 my $PORT        = 2425;
 my $BROADCAST   = '255.255.255.255';
@@ -293,7 +293,7 @@ Net::IPMessenger - Interface to the IP Messenger Protocol
 
 =head1 VERSION
 
-This document describes Net::IPMessenger version 0.07
+This document describes Net::IPMessenger version 0.08
 
 
 =head1 SYNOPSIS
@@ -471,7 +471,7 @@ Masanori Hara  C<< <massa.hara at gmail.com> >>
 
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (c) 2007, Masanori Hara C<< <massa.hara at gmail.com> >>.
+Copyright (c) 2010, Masanori Hara C<< <massa.hara at gmail.com> >>.
 All rights reserved.
 
 This module is free software; you can redistribute it and/or

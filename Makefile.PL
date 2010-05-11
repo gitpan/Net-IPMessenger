@@ -11,7 +11,6 @@ WriteMakefile(
     PREREQ_PM => {
         'Class::Accessor::Fast' => 0,
         'Test::More'            => 0,
-        'Test::Perl::Critic'    => 0,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'Net-IPMessenger-*' },
