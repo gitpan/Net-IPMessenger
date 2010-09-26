@@ -24,8 +24,8 @@ Revision history for Net-IPMessenger
 0.0.6  Fri Oct 13 23:31:44 2006
        Added Net::IPMessenger::update_userlist(). And update_userlist() does not
        add new user who sends SENDMSG with NOADDLIST opt, into user list.
-       Added Net::IPMessenger::RecvEventHandler::READMSG(). It replies ANSREADMSG
-       when READCHECK flag is on.
+       Added Net::IPMessenger::RecvEventHandler::READMSG().
+       It replies ANSREADMSG when READCHECK flag is on.
 
 0.0.7  Mon Nov 12 01:24:11 2007
        Added package Net::IPMessenger::Encrypt, Net::IPMessenger::EncryptOption
@@ -34,3 +34,6 @@ Revision history for Net-IPMessenger
 0.0.8  Tue May 11 23:43:49 2010
        Removed Test::Perl::Critic from Makefile.PL.
        changed perlcritic.t, pod-coverage.t not to run tests by default.
+
+0.0.9  Sun Sep 26 23:09:39 2010
+       Deleted BR_EXIT event from RecvEventHandler.pm

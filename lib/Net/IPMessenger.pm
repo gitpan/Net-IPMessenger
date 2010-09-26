@@ -19,7 +19,7 @@ __PACKAGE__->mk_accessors(
         )
 );
 
-our $VERSION    = '0.08';
+our $VERSION    = '0.09';
 my $PROTO       = 'udp';
 my $PORT        = 2425;
 my $BROADCAST   = '255.255.255.255';

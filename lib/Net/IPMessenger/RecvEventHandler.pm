@@ -5,7 +5,7 @@ use strict;
 use IO::Socket;
 use base qw( Net::IPMessenger::EventHandler );
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 sub BR_ENTRY {
     my $self  = shift;
@@ -20,14 +20,6 @@ sub BR_ENTRY {
             option  => $ipmsg->my_info,
         }
     );
-}
-
-sub BR_EXIT {
-    my $self  = shift;
-    my $ipmsg = shift;
-    my $key   = shift->key;
-
-    delete $ipmsg->user->{$key};
 }
 
 sub ANSLIST {
